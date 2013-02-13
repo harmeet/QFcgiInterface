@@ -5,16 +5,21 @@
  */
 
 #include <QtCore/QCoreApplication>
+#include <QByteArray>
 
 #include "fastcgilistener.h"
+#include "requesthandler.h"
 
+int main(int argc, char *argv[]) {
+    QCoreApplication a(argc, argv);
 
-int main(int argc, char *argv[])
-{
-	QCoreApplication a(argc, argv);
+    FastCgiListener listener(9000, &a);
+    listener.listen();
 
-	FastCgiListener listener(9000, &a);
-	listener.listen();
+    RequestHandler handler;
 
-	return a.exec();
+    handler.connect(&listener, SIGNAL(newRequest(FastCgiRequest*)),
+                    &handler, SLOT(newRequest(FastCgiRequest*)));
+
+    return a.exec();
 }

@@ -6,24 +6,31 @@
 
 #include "fastcgilistener.h"
 
-FastCgiListener::FastCgiListener(quint16 port, QObject *parent) : QObject(parent) {
-    this->intPort = port;
+#include <QFile>
 
-    this->tcpServer = new QTcpServer(this);
+FastCgiListener::FastCgiListener(quint16 port, QObject *parent) :
+    QObject(parent),
+    isTcpListener(true),
+    isFileListener(false),
+    tcpServer(new QTcpServer(this)),
+    intPort(port),
+    localServer(0) {
+
     this->connect(this->tcpServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
-
-    this->isFileListener = false;
-    this->isTcpListener = true;
 }
 
-FastCgiListener::FastCgiListener(QString file, QObject *parent) : QObject(parent) {
-    this->strFile = file;
+FastCgiListener::FastCgiListener(QString file, QObject *parent) :
+    QObject(parent),
+    isTcpListener(false),
+    isFileListener(true),
+    tcpServer(0),
+    intPort(0),
+    localServer(new QLocalServer(this)),
+    strFile(file) {
 
-    this->localServer = new QLocalServer(this);
+    QFile::remove(this->strFile); // remove any previous instance...
+
     this->connect(this->localServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
-
-    this->isFileListener = true;
-    this->isTcpListener = false;
 }
 
 FastCgiListener::~FastCgiListener() {
@@ -47,6 +54,7 @@ void FastCgiListener::newConnection() {
         newClient = (QIODevice*)this->localServer->nextPendingConnection();
     }
     this->connect(newClient, SIGNAL(readyRead()), this, SLOT(newDataAvailable()));
+    this->connect(newClient, SIGNAL(disconnected()), newClient, SLOT(deleteLater()));
 }
 
 void FastCgiListener::newDataAvailable() {
